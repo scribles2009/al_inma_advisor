@@ -3,3 +3,5 @@ yfinance
 textblob
 pandas
 numpy
+scikit-learn
+scipy
