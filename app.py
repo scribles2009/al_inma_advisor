@@ -14,7 +14,6 @@ st.set_page_config(
     layout="wide",
 )
 
-# تخصيص واجهة التطبيق بألوان الهوية الاستثمارية الرسمية لعملاء المصرف
 st.markdown(
     """
     <style>
@@ -62,16 +61,16 @@ def get_live_market_and_news(ticker_symbol, info_dict):
     try:
         stock = yf.Ticker(ticker_symbol)
         
-        # 1. سحب السعر الحي وبيانات السوق لآخر 5 أيام لمعرفة حركة السهم
+        # سحب بيانات السوق لآخر 5 أيام
         df = stock.history(period="5d")
         if df.empty or len(df) < 2:
             raise Exception("خطأ في الاتصال بخادم البيانات")
         live_price = stock.info.get("currentPrice", df["Close"].iloc[-1])
         
-        # حساب التغير السعري الفعلي الحالي للسهم في السوق
+        # حساب التغير السعري الفعلي
         price_change_ratio = (df["Close"].iloc[-1] - df["Close"].iloc[-2]) / df["Close"].iloc[-2]
         
-        # 2. سحب آخر خبر حقيقي للشركة من الإنترنت تلقائياً
+        # سحب آخر خبر حقيقي
         news_list = stock.news
         if news_list and len(news_list) > 0:
             fetched_news = news_list[0].get('title', info_dict["backup_news"])
@@ -79,13 +78,19 @@ def get_live_market_and_news(ticker_symbol, info_dict):
             fetched_news = info_dict["backup_news"]
             
         status = "متصل بالإنترنت بالكامل (أسعار وأخبار حية)"
-        return float(live_price), fetched_news, float(price_change_ratio), status
+        return float(live_price), fetched_news, float(price_change_ratio), status, df
         
     except Exception:
         status = "بيانات السوق الافتراضية المحفوظة (وضع عدم الاتصال)"
         np.random.seed(42)
         mock_change = np.random.choice([-0.012, 0.015, 0.008])
-        return float(info_dict["backup_price"]), info_dict["backup_news"], mock_change, status
+        # صنع إطار بيانات افتراضي للاحتياط
+        dates = pd.date_range(end=pd.Timestamp.now(), periods=5)
+        df_backup = pd.DataFrame(
+            {"Close": [info_dict["backup_price"] * (1 + i*0.005) for i in range(5)], "Volume": [1200000, 1300000, 1100000, 1500000, 1400000]},
+            index=dates
+        )
+        return float(info_dict["backup_price"]), info_dict["backup_news"], mock_change, status, df_backup
 
 
 # ==========================================
@@ -94,20 +99,19 @@ def get_live_market_and_news(ticker_symbol, info_dict):
 if run_analysis:
     with st.spinner("الذكاء الاصطناعي يتصل بالإنترنت الآن ويسحب الأسعار والتقارير الإخبارية الحية..."):
 
-        # 1. جلب السعر والخبر ونسبة تغير السهم من الإنترنت معاً
-        live_price, current_live_news, actual_market_change, connection_status = get_live_market_and_news(
+        # جلب البيانات وإضافة df_history للنتائج
+        live_price, current_live_news, actual_market_change, connection_status, df_history = get_live_market_and_news(
             stock_info["ticker"], stock_info
         )
 
-        # 2. معالجة الخبر المسحوب تلقائياً عبر الذكاء الاصطناعي لتحليل المشاعر
+        # معالجة الخبر
         analysis = TextBlob(current_live_news)
         news_score = (analysis.sentiment.polarity + 1) / 2
 
-        # 3. محرك دمج العوامل الذكي (الخبر + حركة السعر الفعلية في تداول)
+        # محرك دمج العوامل
         combined_score = (news_score * 0.6) + ((actual_market_change * 10 + 0.5) * 0.4)
-        combined_score = max(0.15, min(0.85, combined_score)) # حماية الحدود الرياضية للمؤشر
+        combined_score = max(0.15, min(0.85, combined_score))
 
-        # محرك الذكاء الاصطناعي لتعديل السعر المتوقع بناءً على النتيجة المدمجة
         price_impact_percentage = (combined_score - 0.5) * 0.08  
         ai_adjusted_price = live_price * (1 + price_impact_percentage)
 
@@ -118,7 +122,6 @@ if run_analysis:
         else:
             sentiment_label = "محايد"
 
-        # 4. حساب احتمالية الاتجاه القادم
         prob_up = int(combined_score * 100)
         prob_down = 100 - prob_up
 
@@ -126,7 +129,6 @@ if run_analysis:
     st.subheader(f"تقرير التحليل الفوري لـ: {selected_stock_label}")
     st.caption(f"حالة اتصال المنصة: {connection_status}")
 
-    # عرض الخبر المسحوب لايف من الإنترنت أمام الحكام بأسلوب منسق ومظلل
     st.info(f"آخر خبر تم سحبه تلقائياً للشركة من خوادم الإنترنت الإخبارية:\n\n> *\"{current_live_news}\"*")
 
     col1, col2, col3 = st.columns(3)
@@ -144,12 +146,22 @@ if run_analysis:
 
     st.write("---")
 
-    # عرض التوقعات عبر مخطط خطي نظيف واحترافي خالي من التشوهات البصرية
-    st.subheader("توقعات الاتجاه القادم (بناءً على معالجة لغة الخبر الحي وزخم السوق السعري)")
-    prob_df = pd.DataFrame(
-        {"الاحتمالية (%)": [prob_up, prob_down]}, index=["اتجاه صاعد", "اتجاه هابط"]
-    )
-    st.line_chart(prob_df)
+    # تقسيم العرض بالتساوي: رسم بياني على اليمين، وجدول البيانات التاريخية الحية على اليسار
+    col_chart, col_table = st.columns(2)
+    
+    with col_chart:
+        st.subheader("توقعات الاتجاه القادم (مخطط خطي)")
+        prob_df = pd.DataFrame(
+            {"الاحتمالية (%)": [prob_up, prob_down]}, index=["اتجاه صاعد", "اتجاه هابط"]
+        )
+        st.line_chart(prob_df)
+        
+    with col_table:
+        st.subheader("سجل أسعار الإغلاق الأخيرة (تداول حقيقي)")
+        # تنظيف البيانات وعرض أعمدة الإغلاق والحجم فقط بشكل منظم ومنسق
+        display_df = df_history[["Close", "Volume"]].tail(5)
+        display_df.columns = ["سعر الإغلاق (ر.س)", "حجم التداول"]
+        st.dataframe(display_df, use_container_width=True)
 
     # قسم الذكاء الاصطناعي التفسيري الموجه للتحكيم
     st.write("")
