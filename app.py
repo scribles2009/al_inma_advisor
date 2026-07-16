@@ -30,53 +30,58 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.markdown(
-    "<p class='sub-title'>دمج الذكاء الاصطناعي لمعالجة اللغات الطبيعية (NLP) مع التحليل الفني لأسهم مصرف الإنماء</p>",
+    "<p class='sub-title'>دمج الذكاء الاصطناعي لمعالجة اللغات الطبيعية (NLP) مع التحليل الفني للأسهم السعودية</p>",
     unsafe_allow_html=True,
 )
 
 # ==========================================
-# 2. جلب البيانات والمحاكاة
-# ==========================================
-# جلب بيانات سهم مصرف الإنماء كمثال أساسي (الرمز في تداول: 1150.SR)
-ticker_symbol = "1150.SR"
-
-
-@st.cache_data
-def load_stock_data(ticker):
-    data = yf.download(ticker, period="1mo", interval="1d")
-    return data
-
-
-try:
-    stock_df = load_stock_data(ticker_symbol)
-    latest_price = float(stock_df["Close"].iloc[-1])
-    price_change = float(
-        stock_df["Close"].iloc[-1] - stock_df["Close"].iloc[-2]
-    )
-except Exception as e:
-    latest_price = 24.47  # قيمة احتياطية في حال انقطاع الـ API
-    price_change = 0.15
-    stock_df = pd.DataFrame(
-        {"Close": [24.0, 24.2, 24.3, 24.47]},
-        index=pd.date_range(end=pd.Timestamp.now(), periods=4),
-    )
-
-# ==========================================
-# 3. واجهة المستخدم والتفاعل
+# 2. واجهة المستخدم واختيار الشركة
 # ==========================================
 col1, col2 = st.columns([1, 2])
 
 with col1:
     st.subheader("مدخلات النظام اللحظية")
 
-    # اختيار السهم (افتراضياً مصرف الإنماء)
-    stock_input = st.selectbox(
-        "اختر السهم للتحليل:", ["مصرف الإنماء (1150)", "سهم تجريبي آخر"]
+    # قائمة اختيار تشمل الشركات المطلوبة
+    stock_selection = st.selectbox(
+        "اختر الشركة للتحليل:", 
+        ["مصرف الإنماء", "مصرف الراجحي", "أرامكو السعودية"]
     )
 
-    # عرض سعر السهم الحالي بشكل جذاب
+    # ربط خيار المستخدم بالرمز الصحيح في ياهو فاينانشال (yfinance)
+    ticker_mapping = {
+        "مصرف الإنماء": "1150.SR",
+        "مصرف الراجحي": "1120.SR",
+        "أرامكو السعودية": "2222.SR"
+    }
+    ticker_symbol = ticker_mapping[stock_selection]
+
+    # ==========================================
+    # 3. جلب بيانات السهم المختار حياً
+    # ==========================================
+    @st.cache_data
+    def load_stock_data(ticker):
+        data = yf.download(ticker, period="1mo", interval="1d")
+        return data
+
+    try:
+        stock_df = load_stock_data(ticker_symbol)
+        latest_price = float(stock_df["Close"].iloc[-1])
+        price_change = float(
+            stock_df["Close"].iloc[-1] - stock_df["Close"].iloc[-2]
+        )
+    except Exception as e:
+        # قيم احتياطية في حال تعطل الاتصال بالخادم
+        latest_price = 24.50
+        price_change = 0.00
+        stock_df = pd.DataFrame(
+            {"Close": [24.0, 24.2, 24.3, 24.50]},
+            index=pd.date_range(end=pd.Timestamp.now(), periods=4),
+        )
+
+    # عرض سعر السهم المختار حالياً
     st.metric(
-        label="السعر الحالي لمصرف الإنماء",
+        label=f"السعر الحالي لـ {stock_selection}",
         value=f"{latest_price:.2f} ر.س",
         delta=f"{price_change:+.2f} ر.س",
     )
@@ -86,7 +91,7 @@ with col1:
     st.write("تحليل نبرة آخر الأخبار المالية:")
     news_headline = st.text_area(
         "أدخل عنوان الخبر المالي المحرك للسوق باللغة الإنجليزية حالياً:",
-        "Alinma Bank reports record net profits growth for this quarter due to digital transformation expansion.",
+        "The company announced excellent financial results with higher revenue growth than estimated this quarter.",
     )
 
     # تحليل المشاعر (Sentiment Analysis)
@@ -110,8 +115,8 @@ with col1:
     )
 
 with col2:
-    st.subheader("حركة السهم التاريخية (آخر شهر)")
-    # إضافة رسم بياني تفاعلي مدمج من Streamlit
+    st.subheader(f"حركة سهم {stock_selection} التاريخية (آخر شهر)")
+    # رسم بياني تفاعلي يتحدث تلقائياً حسب الشركة المختارة
     st.line_chart(stock_df["Close"])
 
 # ==========================================
