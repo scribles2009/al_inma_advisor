@@ -6,11 +6,10 @@ from sklearn.ensemble import RandomForestClassifier
 from textblob import TextBlob
 
 # ==========================================
-# ⚙️ إعدادات الصفحة وهوية التطبيق (branding)
+# إعدادات الصفحة وهوية التطبيق (branding)
 # ==========================================
 st.set_page_config(
     page_title="مستشار الاستثمار الذكي - مصرف الإنماء",
-    page_icon="📊",
     layout="wide",
 )
 
@@ -26,18 +25,18 @@ st.markdown(
 )
 
 st.markdown(
-    "<div class='main-title'>📈 منصة مستشار الاستثمار الذكي (حصري لعملاء مصرف الإنماء)</div>",
+    "<div class='main-title'>منصة مستشار الاستثمار الذكي (حصري لعملاء مصرف الإنماء)</div>",
     unsafe_allow_html=True,
 )
 st.write(
-    "💡 أداة مدعومة بالذكاء الاصطناعي التفسيري (XAI) لتحليل الأسهم، الأخبار الحية، ومشاعر المستثمرين لدعم اتخاذ القرار المالي."
+    "أداة مدعومة بالذكاء الاصطناعي التفسيري (XAI) لتحليل الأسهم، الأخبار الحية، ومشاعر المستثمرين لدعم اتخاذ القرار المالي."
 )
 st.write("---")
 
 # ==========================================
-# 📊 لوحة التحكم الجانبية (Sidebar)
+# لوحة التحكم الجانبية (Sidebar)
 # ==========================================
-st.sidebar.header("🎛️ إعدادات التحليل الذكي")
+st.sidebar.header("إعدادات التحليل الذكي")
 
 stock_options = {
     "مصرف الإنماء (1150)": {"ticker": "1150.SR", "backup_price": 24.83, "backup_news": "Alinma Bank reports record breaking net profit growth this quarter with expanding digital banking services."},
@@ -48,13 +47,13 @@ stock_options = {
 selected_stock_label = st.sidebar.selectbox("اختر السهم:", list(stock_options.keys()))
 stock_info = stock_options[selected_stock_label]
 
-st.sidebar.info("🔔 النظام الآن يسحب السعر وآخر الأخبار تلقائياً من الإنترنت بمجرد الضغط على الزر بالأسفل!")
+st.sidebar.info("تنبيه: النظام الآن يسحب السعر وآخر الأخبار تلقائياً من الإنترنت بمجرد الضغط على الزر بالأسفل.")
 
-run_analysis = st.sidebar.button("🚀 ابدأ التحليل الفوري وربط البيانات الحية")
+run_analysis = st.sidebar.button("ابدأ التحليل الفوري وربط البيانات الحية")
 
 
 # ==========================================
-# 🛠️ دالة جلب البيانات الحية (الأسعار + الأخبار) من الإنترنت
+# دالة جلب البيانات الحية (الأسعار + الأخبار) من الإنترنت
 # ==========================================
 def get_live_market_and_news(ticker_symbol, info_dict):
     try:
@@ -76,22 +75,21 @@ def get_live_market_and_news(ticker_symbol, info_dict):
         else:
             fetched_news = info_dict["backup_news"]
             
-        status = "متصل بالإنترنت بالكامل (أسعار وأخبار حية) 🟢"
+        status = "متصل بالإنترنت بالكامل (أسعار وأخبار حية)"
         return float(live_price), fetched_news, float(price_change_ratio), status
         
     except Exception:
-        status = "بيانات السوق الافتراضية المحفوظة (Offline) 🟡"
-        # عشوائية خفيفة منطقية للاحتياط لمنع التساوي التام أوفلاين
+        status = "بيانات السوق الافتراضية المحفوظة (Offline)"
         np.random.seed(42)
         mock_change = np.random.choice([-0.012, 0.015, 0.008])
         return float(info_dict["backup_price"]), info_dict["backup_news"], mock_change, status
 
 
 # ==========================================
-# 🎯 عرض النتائج عند الضغط على الزر
+# عرض النتائج عند الضغط على الزر
 # ==========================================
 if run_analysis:
-    with st.spinner("🔄 الذكاء الاصطناعي يتصل بالإنترنت الآن ويسحب الأسعار والتقارير الإخبارية الحية..."):
+    with st.spinner("الذكاء الاصطناعي يتصل بالإنترنت الآن ويسحب الأسعار والتقارير الإخبارية الحية..."):
 
         # 1. جلب السعر والخبر ونسبة تغير السهم من الإنترنت معاً
         live_price, current_live_news, actual_market_change, connection_status = get_live_market_and_news(
@@ -102,32 +100,29 @@ if run_analysis:
         analysis = TextBlob(current_live_news)
         news_score = (analysis.sentiment.polarity + 1) / 2
 
-        # 3. محرك دمج العوامل الذكي (الخبر + حركة السعر الفعلية في تداول) لمنع التساوي التام
-        # إذا كان السهم صاعداً في السوق والخبر محايد، يميل التوقع الإجمالي للصعود تلقائياً
+        # 3. محرك دمج العوامل الذكي
         combined_score = (news_score * 0.6) + ((actual_market_change * 10 + 0.5) * 0.4)
-        combined_score = max(0.15, min(0.85, combined_score)) # حماية الحدود لتبدو منطقية
+        combined_score = max(0.15, min(0.85, combined_score))
 
-        # محرك الذكاء الاصطناعي لتعديل السعر المتوقع بناءً على النتيجة المدمجة
         price_impact_percentage = (combined_score - 0.5) * 0.08  
         ai_adjusted_price = live_price * (1 + price_impact_percentage)
 
         if news_score > 0.54:
-            sentiment_label = "إيجابي 👍"
+            sentiment_label = "إيجابي"
         elif news_score < 0.46:
-            sentiment_label = "سلبي أو حذر 👎"
+            sentiment_label = "سلبي أو حذر"
         else:
-            sentiment_label = "محايد 😐"
+            sentiment_label = "محايد"
 
-        # 4. حساب احتمالية الاتجاه القادم بدقة ديناميكية متفاوتة دائماً
+        # 4. حساب احتمالية الاتجاه القادم
         prob_up = int(combined_score * 100)
         prob_down = 100 - prob_up
 
-    # 🏛️ عرض النتائج في الواجهة
-    st.subheader(f"📊 تقرير التحليل الفوري لـ: {selected_stock_label}")
+    # عرض النتائج في الواجهة
+    st.subheader(f"تقرير التحليل الفوري لـ: {selected_stock_label}")
     st.caption(f"حالة اتصال المنصة: {connection_status}")
 
-    # عرض الخبر المسحوب لايف من الإنترنت أمام الحكام
-    st.info(f"📰 **آخر خبر تم سحبه تلقائياً لـ {selected_stock_label} من الإنترنت الآن:**\n\n> *\"{current_live_news}\"*")
+    st.info(f"**آخر خبر تم سحبه تلقائياً لـ {selected_stock_label} من الإنترنت الآن:**\n\n> *\"{current_live_news}\"*")
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -144,22 +139,24 @@ if run_analysis:
 
     st.write("---")
 
-    st.subheader("🎯 توقعات الاتجاه القادم (بناءً على معالجة لغة الخبر الحي وزخم السوق السعري)")
+    st.subheader("توقعات الاتجاه القادم (بناءً على معالجة لغة الخبر الحي وزخم السوق السعري)")
+    
+    # هنا تم تأمين المخطط البياني بنصوص رسمية خالية تماماً من الإيموجي لضمان جودة العرض
     prob_df = pd.DataFrame(
-        {"الاحتمالية (%)": [prob_up, prob_down]}, index=["صعود السهم 📈", "هبوط السهم 📉"]
+        {"الاحتمالية (%)": [prob_up, prob_down]}, index=["اتجاه صاعد", "اتجاه هابط"]
     )
     st.bar_chart(prob_df)
 
-    st.info("💡 **الذكاء الاصطناعي التفسيري (Explainable AI): مبررات التوقع والربط**")
+    st.info("الذكاء الاصطناعي التفسيري (Explainable AI): مبررات التوقع والربط")
     st.write(
-        f"• **التحليل الدلالي والمؤشرات الفنية:** قام النموذج بدمج النبرة النفسية للخبر المسحوب (**{news_score*100:.1f}%**) مع الزخم السعري الفعلي لحركة السهم الحالية في منصة تداول (**{actual_market_change*100:.2f}%**)، ليقوم بوزن الاحتماليات بدقة تضمن الشفافية الاستثمارية والابتعاد عن التوقعات الصماء العشوائية."
+        f"• قام النموذج بدمج النبرة النفسية للخبر المسحوب ({news_score*100:.1f}%) مع الزخم السعري الفعلي لحركة السهم الحالية في منصة تداول ({actual_market_change*100:.2f}%)، ليقوم بوزن الاحتماليات بدقة تضمن الشفافية الاستثمارية والابتعاد عن التوقعات الصماء العشوائية."
     )
 
     st.warning(
-        "⚠️ **إخلاء مسؤولية قانوني:** هذا النظام مصنف كأداة تقنية استرشادية لدعم القرار المالي لعملاء مصرف الإنماء، ولا يعتبر توصية بيع أو شراء مباشرة."
+        "إخلاء مسؤولية قانوني: هذا النظام مصنف كأداة تقنية استرشادية لدعم القرار المالي لعملاء مصرف الإنماء، ولا يعتبر توصية بيع أو شراء مباشرة."
     )
 
 else:
     st.info(
-        "👈 بمجرد الضغط على زر **[🚀 ابدأ التحليل الفوري وربط البيانات الحية]**، سيتصل النظام بالإنترنت، ليدمج سعر السهم اللحظي، وحركته الفنية، مع آخر خبر منشور تلقائياً!"
+        "بمجرد الضغط على زر [ابدأ التحليل الفوري وربط البيانات الحية]، سيتصل النظام بالإنترنت، ليدمج سعر السهم اللحظي، وحركته الفنية، مع آخر خبر منشور تلقائياً."
     )
